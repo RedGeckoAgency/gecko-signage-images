@@ -129,6 +129,10 @@ EOF
   pushd "$CACHE_DIR" >/dev/null
     mkdir -p stage4/03-bookshelf
     touch stage4/03-bookshelf/SKIP
+    FINALISE_SCRIPT="export-image/05-finalise/01-run.sh"
+    if [ -f "$FINALISE_SCRIPT" ]; then
+      sed -i -E 's#(cp[[:space:]]+"?\$BMAP_FILE"?[[:space:]]+"?\$DEPLOY_DIR/"?)#\1 || true#g' "$FINALISE_SCRIPT" || true
+    fi
     SUDO=""
     if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then SUDO="sudo"; fi
     echo "=== [$ARCHLBL] Starting pi-gen Docker build (container: $CONTAINER_NAME) ==="
