@@ -39,21 +39,16 @@ jobs:
                   docker-images: false
                   swap-storage: true
 
-            - name: Configure SSH for submodules
-              shell: bash
-              env:
-                  GECKO_DEPLOY_KEY: ${{ secrets.GECKO_DEPLOY_KEY }}
-              run: |
-                  mkdir -p ~/.ssh
-                  echo "$GECKO_DEPLOY_KEY" > ~/.ssh/id_ed25519
-                  chmod 600 ~/.ssh/id_ed25519
-                  printf "Host github.com\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
-                  ssh -T git@github.com || true
-
             - name: Checkout
               uses: actions/checkout@v4
               with:
                   submodules: recursive
+                  # Use an SSH deploy key that has read access to the private submodule(s)
+                  ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
+                  # Avoid rewriting remotes to use HTTPS token auth
+                  persist-credentials: false
+                  # Optional: disable strict host key checking for GitHub
+                  ssh-strict: false
                   fetch-depth: 0
 
             - name: Set up dependencies
