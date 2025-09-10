@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STAMP="/var/lib/gecko-bootstrap.done"
+mkdir -p "$(dirname "$STAMP")"
+
+if [[ -f "$STAMP" ]]; then
+  echo "Gecko bootstrap already completed; nothing to do."
+  exit 0
+fi
+
+if [[ ! -x /opt/gecko/tools/bootstrap_gecko.sh ]]; then
+  echo "ERROR: /opt/gecko/tools/bootstrap_gecko.sh not found or not executable." >&2
+  exit 1
+fi
+
+echo "Running Gecko bootstrap..."
+/opt/gecko/tools/bootstrap_gecko.sh
+
+echo "Bootstrap succeeded; marking done and disabling service."
+touch "$STAMP"
+systemctl disable gecko-bootstrap.service || true
+rm -f /etc/systemd/system/gecko-bootstrap.service || true
+systemctl daemon-reload || true

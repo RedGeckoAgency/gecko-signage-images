@@ -1,0 +1,4 @@
+IMG_NAME=gecko-os
+RELEASE=bookworm
+ENABLE_SSH=1
+STAGE_LIST="stage0 stage1 stage2 stage3"

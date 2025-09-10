@@ -1,0 +1,11 @@
+[Unit]
+Description=Run Gecko bootstrap once
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/gecko-bootstrap-once
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

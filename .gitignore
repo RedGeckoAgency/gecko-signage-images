@@ -1,0 +1,6 @@
+.cache/
+out/
+*.swp
+*.swo
+*.DS_Store
+README.local.md

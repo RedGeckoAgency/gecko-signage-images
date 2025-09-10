@@ -1,0 +1,57 @@
+name: Build Gecko OS Image
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure SSH for submodules
+        shell: bash
+        env:
+          GECKO_DEPLOY_KEY: ${{ secrets.GECKO_DEPLOY_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$GECKO_DEPLOY_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf "Host github.com\n  StrictHostKeyChecking no\n" >> ~/.ssh/config
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends                 git rsync xz-utils bmap-tools qemu-user-static pigz
+
+      - name: Build image (pi-gen + Docker)
+        run: |
+          chmod +x scripts/build-local.sh
+          ./scripts/build-local.sh
+
+      - name: Generate build manifest
+        run: |
+          AGENT_SHA=$(git -C gecko rev-parse --short=12 HEAD || echo "no-submodule")
+          DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          printf "agent_sha=%s\ndate_utc=%s\n" "$AGENT_SHA" "$DATE" > out/BUILDINFO.txt
+          echo "Build manifest:"
+          cat out/BUILDINFO.txt
+
+      - name: Checksums
+        run: |
+          cd out
+          sha256sum * > SHA256SUMS || shasum -a 256 * > SHA256SUMS || true
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
