@@ -1,0 +1,3 @@
+[submodule "gecko"]
+	path = gecko
+	url = git@github.com:RedGeckoAgency/gecko-signage-agent.git
