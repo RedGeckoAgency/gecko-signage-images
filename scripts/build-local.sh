@@ -4,14 +4,11 @@ cd "$(dirname "$0")/.."
 
 echo "Gecko build-local $(date --iso-8601=seconds)"
 
-# ---------- Pick stable pi-gen refs (can override via env) ----------
 PIGEN_REF_ARMHF="${PIGEN_REF_ARMHF:-2025-05-13-raspios-bookworm-armhf}"
 PIGEN_REF_ARM64="${PIGEN_REF_ARM64:-2025-05-13-raspios-bookworm-arm64}"
 
-# Matrix-friendly selector: armhf | arm64 | both
 ONLY_ARCH="${ONLY_ARCH:-both}"
 
-# ---------- Host deps ----------
 if command -v apt-get >/dev/null 2>&1; then
   sudo apt-get update -y
   sudo apt-get install -y --no-install-recommends \
@@ -31,7 +28,6 @@ fi
 
 TEMPLATE_CONFIG_DIR="$WORKDIR/config"
 
-# helper: ensure/replace KEY=VALUE line in config
 ensure_cfg () {
   local file="$1" key="$2" val="$3"
   if grep -q "^[[:space:]]*${key}=" "$file"; then
@@ -42,8 +38,8 @@ ensure_cfg () {
 }
 
 build_one () {
-  local REF="$1"            # tag or branch name
-  local ARCHLBL="$2"        # armhf / arm64
+  local REF="$1"
+  local ARCHLBL="$2"
 
   local RUN_OUT="$OUTDIR/$ARCHLBL"
   local CACHE_DIR="$WORKDIR/.cache/pi-gen-$ARCHLBL"
@@ -56,7 +52,6 @@ build_one () {
   ( cd "$CACHE_DIR" && git fetch --tags --depth=1 && git checkout -B gecko-build "$REF" )
   echo "[$ARCHLBL] pi-gen ref: $(git -C "$CACHE_DIR" describe --tags --always || git -C "$CACHE_DIR" rev-parse --short HEAD)"
 
-  # ---------- config selection ----------
   if [ -f "$WORKDIR/gecko/image/config" ]; then
     echo "[$ARCHLBL] Using private config from gecko/image/config"
     cp -a "$WORKDIR/gecko/image/config" "$CACHE_DIR/config"
@@ -74,35 +69,29 @@ RELEASE="bookworm"
 EOF
   fi
 
-  # sanitize line endings
   if command -v dos2unix >/dev/null 2>&1; then
     dos2unix "$CACHE_DIR/config" >/dev/null 2>&1 || true
   else
     sed -i 's/\r$//' "$CACHE_DIR/config" || true
   fi
 
-  # ---------- harden & force the bits we need ----------
   ensure_cfg "$CACHE_DIR/config" 'RELEASE' '"bookworm"'
-  # Make sure we build desktop export (stage4)
   if grep -q '^STAGE_LIST=' "$CACHE_DIR/config"; then
     sed -i 's#^STAGE_LIST=.*#STAGE_LIST="stage0 stage1 stage2 stage3 stage4"#' "$CACHE_DIR/config"
   else
     echo 'STAGE_LIST="stage0 stage1 stage2 stage3 stage4"' >> "$CACHE_DIR/config"
   fi
 
-  # Faster/more reliable mirrors and apt options
   ensure_cfg "$CACHE_DIR/config" 'APT_MIRROR' '"https://deb.debian.org/debian"'
   ensure_cfg "$CACHE_DIR/config" 'APT_MIRROR_RASPBIAN' '"https://raspbian.raspberrypi.org/raspbian"'
   ensure_cfg "$CACHE_DIR/config" 'RPI_MIRROR' '"https://archive.raspberrypi.org/debian"'
   ensure_cfg "$CACHE_DIR/config" 'APT_OPTS' '"-o Acquire::Retries=8 -o Acquire::ForceIPv4=true -o Acquire::http::Timeout=45 -o Acquire::https::Timeout=45 --fix-missing"'
 
-  # Default locale/keyboard/timezone
   ensure_cfg "$CACHE_DIR/config" 'LOCALE_DEFAULT' '"en_US.UTF-8"'
   ensure_cfg "$CACHE_DIR/config" 'KEYBOARD_LAYOUT' '"us"'
   ensure_cfg "$CACHE_DIR/config" 'KEYBOARD_KEYMAP' '"us"'
   ensure_cfg "$CACHE_DIR/config" 'TIMEZONE_DEFAULT' '"America/New_York"'
 
-  # Export as .img.xz
   ensure_cfg "$CACHE_DIR/config" 'DEPLOY_COMPRESSION' '"xz"'
   ensure_cfg "$CACHE_DIR/config" 'COMPRESSION_LEVEL' '"6"'
 
@@ -115,7 +104,6 @@ EOF
   echo "[$ARCHLBL] Effective config:"
   sed -n '1,200p' "$CACHE_DIR/config"
 
-  # ---------- add your stage3 overlays ----------
   mkdir -p "$CACHE_DIR/stage3"
   if [ -d "$WORKDIR/stages" ]; then
     cp -a "$WORKDIR/stages/." "$CACHE_DIR/stage3/"
@@ -125,7 +113,6 @@ EOF
   [ -f "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh" ] && \
     chmod +x "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh"
 
-  # ---------- apt hardening inside stage0 (rewrite http->https if needed) ----------
   mkdir -p "$CACHE_DIR/stage0/00-apt-tuning"
   cat > "$CACHE_DIR/stage0/00-apt-tuning/00-run.sh" <<'EOF'
 #!/bin/bash -e
@@ -138,15 +125,14 @@ sed -i 's#http://raspbian\.raspberrypi\.org/raspbian#https://raspbian.raspberryp
 sed -i 's#http://archive\.raspberrypi\.org/debian#https://archive.raspberrypi.org/debian#g' /etc/apt/sources.list.d/raspi.list 2>/dev/null || true
 EOF
   chmod +x "$CACHE_DIR/stage0/00-apt-tuning/00-run.sh"
-
-  # ---------- build in Docker (with retries) ----------
   docker rm -fv "$CONTAINER_NAME" >/dev/null 2>&1 || true
   pushd "$CACHE_DIR" >/dev/null
+    mkdir -p stage4/03-bookshelf
+    touch stage4/03-bookshelf/SKIP
     SUDO=""
     if command -v sudo >/dev/null 2>&1 && sudo -n true 2>/dev/null; then SUDO="sudo"; fi
     echo "=== [$ARCHLBL] Starting pi-gen Docker build (container: $CONTAINER_NAME) ==="
 
-    # retry wrapper to survive transient debootstrap fetch failures
     max_tries="${MAX_RETRIES:-3}"
     try=1
     rc=1
@@ -168,11 +154,9 @@ EOF
     fi
   popd >/dev/null
 
-  # ---------- collect outputs ----------
   mkdir -p "$RUN_OUT"
   cp -a "$CACHE_DIR/deploy/." "$RUN_OUT/" || true
 
-  # checksums (if files exist)
   (
     cd "$RUN_OUT"
     ls -1 *.img *.img.xz *.zip *.bmap *.info 2>/dev/null | xargs -r sha256sum > SHA256SUMS || true
@@ -183,7 +167,6 @@ EOF
   ls -lh "$RUN_OUT" || true
 }
 
-# ---------- Build per ONLY_ARCH ----------
 case "$ONLY_ARCH" in
   armhf)
     build_one "$PIGEN_REF_ARMHF" "armhf"

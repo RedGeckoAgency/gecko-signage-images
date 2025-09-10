@@ -28,26 +28,23 @@ jobs:
                       pigen_ref: 2025-05-13-raspios-bookworm-arm64
 
         steps:
-            - name: Free disk space (optional but recommended)
-              uses: jlumbroso/free-disk-space@main
-              with:
-                  tool-cache: true
-                  android: true
-                  dotnet: true
-                  haskell: true
-                  large-packages: true
-                  docker-images: false
-                  swap-storage: true
+            # - name: Free disk space (optional but recommended)
+            #   uses: jlumbroso/free-disk-space@main
+            #   with:
+            #       tool-cache: true
+            #       android: true
+            #       dotnet: true
+            #       haskell: true
+            #       large-packages: true
+            #       docker-images: false
+            #       swap-storage: true
 
             - name: Checkout
               uses: actions/checkout@v4
               with:
                   submodules: recursive
-                  # Use an SSH deploy key that has read access to the private submodule(s)
                   ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
-                  # Avoid rewriting remotes to use HTTPS token auth
                   persist-credentials: false
-                  # Optional: disable strict host key checking for GitHub
                   ssh-strict: false
                   fetch-depth: 0
 
