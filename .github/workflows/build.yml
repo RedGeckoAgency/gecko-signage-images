@@ -28,16 +28,16 @@ jobs:
                       pigen_ref: 2025-05-13-raspios-bookworm-arm64
 
         steps:
-            # - name: Free disk space (optional but recommended)
-            #   uses: jlumbroso/free-disk-space@main
-            #   with:
-            #       tool-cache: true
-            #       android: true
-            #       dotnet: true
-            #       haskell: true
-            #       large-packages: true
-            #       docker-images: false
-            #       swap-storage: true
+            - name: Free disk space (optional but recommended)
+              uses: jlumbroso/free-disk-space@main
+              with:
+                  tool-cache: true
+                  android: true
+                  dotnet: true
+                  haskell: true
+                  large-packages: true
+                  docker-images: false
+                  swap-storage: true
 
             - name: Checkout
               uses: actions/checkout@v4
@@ -83,7 +83,6 @@ jobs:
             - name: Checksums (per-arch)
               run: |
                   cd out
-                  # Per-arch subfolder exists; add a local SHA256SUMS if not already there
                   for d in armhf arm64; do
                     if [ -d "$d" ]; then
                       (cd "$d" && (sha256sum * > SHA256SUMS || shasum -a 256 * > SHA256SUMS) || true)
@@ -121,7 +120,9 @@ jobs:
               run: |
                   cd dist
                   { for f in armhf/SHA256SUMS arm64/SHA256SUMS; do
-                      [ -f "$f" ] && sed "s#^#$(basename "$(dirname "$f")")/#" "$f";
+                      if [ -f "$f" ]; then
+                        awk '{print}' "$f" | grep -E '  .*\.img(\.xz)?$' | sed "s#^#$(basename "$(dirname "$f")")/#";
+                      fi
                     done; } > SHA256SUMS || true
                   ls -l
 
@@ -132,8 +133,8 @@ jobs:
                   prerelease: false
                   generate_release_notes: true
                   files: |
-                      dist/armhf/*
-                      dist/arm64/*
+                      dist/armhf/*.img.xz
+                      dist/arm64/*.img.xz
                       dist/SHA256SUMS
                       dist/BUILDINFO-*.txt
               env:

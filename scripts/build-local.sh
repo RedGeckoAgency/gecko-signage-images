@@ -98,7 +98,7 @@ EOF
   {
     echo
     echo "# appended by build script"
-    echo "IMG_NAME=\"gecko-${REF}-${ARCHLBL}\""
+    echo "IMG_NAME=\"gecko-${REF}\""
   } >> "$CACHE_DIR/config"
 
   echo "[$ARCHLBL] Effective config:"
