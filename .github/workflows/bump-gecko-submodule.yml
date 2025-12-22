@@ -9,9 +9,7 @@ on:
                 description: "Full commit SHA in RedGeckoAgency/gecko-signage-agent to pin the submodule to"
                 required: true
                 type: string
-  # Triggered from the private agent repo via GitHub API.
-  # We intentionally do not restrict `types:` here so a mismatch can't silently prevent runs.
-  repository_dispatch:
+    repository_dispatch:
 
 permissions:
     contents: write
@@ -27,15 +25,15 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
-      - name: Debug trigger
-        shell: bash
-        run: |
-          set -euo pipefail
-          echo "event_name=${{ github.event_name }}"
-          echo "ref=${{ github.ref }}"
-          echo "actor=${{ github.actor }}"
-          echo "dispatch_action=${{ github.event.action || '' }}"
-          echo "client_payload=${{ toJson(github.event.client_payload) }}"
+            - name: Debug trigger
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  echo "event_name=${{ github.event_name }}"
+                  echo "ref=${{ github.ref }}"
+                  echo "actor=${{ github.actor }}"
+                  echo "dispatch_action=${{ github.event.action || '' }}"
+                  echo "client_payload=${{ toJson(github.event.client_payload) }}"
 
             - name: Resolve target SHA
               id: sha
