@@ -25,6 +25,18 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+      - name: Start SSH agent (for private submodule)
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.GECKO_DEPLOY_KEY }}
+
+      - name: Trust GitHub host key
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> ~/.ssh/known_hosts
+
             - name: Resolve target SHA
               id: sha
               shell: bash
@@ -54,9 +66,15 @@ jobs:
               with:
                   fetch-depth: 0
                   submodules: recursive
-                  ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
                   persist-credentials: false
-                  ssh-strict: false
+
+            - name: Verify submodule remote is reachable
+              shell: bash
+              run: |
+                set -euo pipefail
+                git -C gecko remote -v
+                # This should succeed when the deploy key is correctly installed on the private repo.
+                git -C gecko ls-remote --exit-code origin HEAD >/dev/null
 
             - name: Move gecko submodule to target SHA
               shell: bash
