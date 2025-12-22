@@ -109,10 +109,10 @@ jobs:
                   fi
 
             - name: Create pull request
-              if: steps.changed.outputs.changed == 'true'
+              if: steps.changed.outputs.changed == 'true' && secrets.GECKO_PR_BOT_TOKEN != ''
               uses: peter-evans/create-pull-request@v7
               with:
-                  token: ${{ secrets.GITHUB_TOKEN }}
+                  token: ${{ secrets.GECKO_PR_BOT_TOKEN }}
                   title: "Bump gecko submodule to ${{ steps.sha.outputs.short }}"
                   commit-message: "Bump gecko submodule to ${{ steps.sha.outputs.short }}"
                   branch: "bot/bump-gecko-${{ steps.sha.outputs.short }}"
@@ -124,6 +124,15 @@ jobs:
                       - Target SHA: `${{ steps.sha.outputs.sha }}`
 
                       After merging, tag a release in this repo (e.g. `vX.Y.Z`) to build/publish new images.
+
+            - name: PR creation not permitted (manual fallback)
+              if: steps.changed.outputs.changed == 'true' && secrets.GECKO_PR_BOT_TOKEN == ''
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  echo "A PR branch was pushed, but this workflow cannot create PRs with GITHUB_TOKEN in this repo/org." >&2
+                  echo "Set a fine-grained PAT secret named GECKO_PR_BOT_TOKEN (Contents: Read+Write, Pull requests: Read+Write) to enable auto PR creation." >&2
+                  echo "Create the PR manually: https://github.com/${GITHUB_REPOSITORY}/pull/new/bot/bump-gecko-${{ steps.sha.outputs.short }}"
 
             - name: No changes
               if: steps.changed.outputs.changed != 'true'
