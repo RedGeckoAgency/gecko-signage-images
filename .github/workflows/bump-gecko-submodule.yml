@@ -49,14 +49,12 @@ jobs:
                   echo "sha=$SHA" >> "$GITHUB_OUTPUT"
                   echo "short=${SHA:0:12}" >> "$GITHUB_OUTPUT"
 
-            - name: Checkout (with submodules)
+            - name: Checkout (repo only)
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
-                  submodules: recursive
-                  ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
+                  submodules: false
                   persist-credentials: false
-                  ssh-strict: false
 
             - name: Start SSH agent (for private submodule)
               uses: webfactory/ssh-agent@v0.9.0
@@ -69,6 +67,13 @@ jobs:
                   set -euo pipefail
                   mkdir -p ~/.ssh
                   ssh-keyscan -t rsa,ecdsa,ed25519 github.com >> ~/.ssh/known_hosts
+
+            - name: Init/update submodule (gecko)
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  git submodule sync --recursive
+                  git submodule update --init --recursive
 
             - name: Verify submodule remote is reachable
               shell: bash
@@ -107,6 +112,7 @@ jobs:
               if: steps.changed.outputs.changed == 'true'
               uses: peter-evans/create-pull-request@v7
               with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
                   title: "Bump gecko submodule to ${{ steps.sha.outputs.short }}"
                   commit-message: "Bump gecko submodule to ${{ steps.sha.outputs.short }}"
                   branch: "bot/bump-gecko-${{ steps.sha.outputs.short }}"
