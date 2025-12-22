@@ -1,0 +1,105 @@
+name: Bump gecko submodule
+
+on:
+    workflow_dispatch:
+        inputs:
+            gecko_sha:
+                description: "Full commit SHA in RedGeckoAgency/gecko-signage-agent to pin the submodule to"
+                required: true
+                type: string
+    repository_dispatch:
+        types:
+            - gecko_submodule_updated
+
+permissions:
+    contents: write
+    pull-requests: write
+
+concurrency:
+    group: bump-gecko-submodule
+    cancel-in-progress: false
+
+jobs:
+    bump:
+        name: Create PR bumping gecko
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Resolve target SHA
+              id: sha
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  SHA_INPUT="${{ inputs.gecko_sha || '' }}"
+                  SHA_DISPATCH="${{ github.event.client_payload.sha || '' }}"
+
+                  if [ -n "$SHA_INPUT" ]; then
+                    SHA="$SHA_INPUT"
+                  else
+                    SHA="$SHA_DISPATCH"
+                  fi
+
+                  if ! [[ "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+                    echo "Invalid or missing gecko SHA: '$SHA'" >&2
+                    echo "Provide inputs.gecko_sha (workflow_dispatch) or client_payload.sha (repository_dispatch)." >&2
+                    exit 1
+                  fi
+
+                  echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+                  echo "short=${SHA:0:12}" >> "$GITHUB_OUTPUT"
+
+            - name: Checkout (with submodules)
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  submodules: recursive
+                  ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
+                  persist-credentials: false
+                  ssh-strict: false
+
+            - name: Move gecko submodule to target SHA
+              shell: bash
+              run: |
+                  set -euo pipefail
+
+                  TARGET_SHA="${{ steps.sha.outputs.sha }}"
+
+                  # Ensure we can fetch the specific commit from the private repo.
+                  git -C gecko fetch --no-tags --depth=1 origin "$TARGET_SHA"
+                  git -C gecko checkout --detach "$TARGET_SHA"
+
+                  # Stage the gitlink change in the parent repo.
+                  git add gecko
+
+            - name: Detect no-op
+              id: changed
+              shell: bash
+              run: |
+                  set -euo pipefail
+                  if git diff --cached --quiet; then
+                    echo "changed=false" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "changed=true" >> "$GITHUB_OUTPUT"
+                  fi
+
+            - name: Create pull request
+              if: steps.changed.outputs.changed == 'true'
+              uses: peter-evans/create-pull-request@v7
+              with:
+                  title: "Bump gecko submodule to ${{ steps.sha.outputs.short }}"
+                  commit-message: "Bump gecko submodule to ${{ steps.sha.outputs.short }}"
+                  branch: "bot/bump-gecko-${{ steps.sha.outputs.short }}"
+                  delete-branch: true
+                  body: |
+                      This PR updates the `gecko` git submodule pointer.
+
+                      - Repo: `RedGeckoAgency/gecko-signage-agent` (private)
+                      - Target SHA: `${{ steps.sha.outputs.sha }}`
+
+                      After merging, tag a release in this repo (e.g. `vX.Y.Z`) to build/publish new images.
+
+            - name: No changes
+              if: steps.changed.outputs.changed != 'true'
+              run: |
+                  echo "gecko submodule already points at ${{ steps.sha.outputs.sha }}; nothing to do."
