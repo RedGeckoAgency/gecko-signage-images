@@ -1,5 +1,7 @@
 name: Bump gecko submodule
 
+run-name: Bump gecko submodule
+
 on:
     workflow_dispatch:
         inputs:
@@ -7,9 +9,9 @@ on:
                 description: "Full commit SHA in RedGeckoAgency/gecko-signage-agent to pin the submodule to"
                 required: true
                 type: string
-    repository_dispatch:
-        types:
-            - gecko_submodule_updated
+  # Triggered from the private agent repo via GitHub API.
+  # We intentionally do not restrict `types:` here so a mismatch can't silently prevent runs.
+  repository_dispatch:
 
 permissions:
     contents: write
@@ -25,6 +27,16 @@ jobs:
         runs-on: ubuntu-latest
 
         steps:
+      - name: Debug trigger
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "event_name=${{ github.event_name }}"
+          echo "ref=${{ github.ref }}"
+          echo "actor=${{ github.actor }}"
+          echo "dispatch_action=${{ github.event.action || '' }}"
+          echo "client_payload=${{ toJson(github.event.client_payload) }}"
+
             - name: Resolve target SHA
               id: sha
               shell: bash
@@ -48,6 +60,19 @@ jobs:
 
                   echo "sha=$SHA" >> "$GITHUB_OUTPUT"
                   echo "short=${SHA:0:12}" >> "$GITHUB_OUTPUT"
+
+            - name: Decide PR token
+              id: prtoken
+              shell: bash
+              env:
+                  PR_TOKEN: ${{ secrets.GECKO_PR_BOT_TOKEN }}
+              run: |
+                  set -euo pipefail
+                  if [ -n "${PR_TOKEN}" ]; then
+                    echo "has_token=true" >> "$GITHUB_OUTPUT"
+                  else
+                    echo "has_token=false" >> "$GITHUB_OUTPUT"
+                  fi
 
             - name: Checkout (repo only)
               uses: actions/checkout@v4
@@ -109,7 +134,7 @@ jobs:
                   fi
 
             - name: Create pull request
-              if: steps.changed.outputs.changed == 'true' && secrets.GECKO_PR_BOT_TOKEN != ''
+              if: steps.changed.outputs.changed == 'true' && steps.prtoken.outputs.has_token == 'true'
               uses: peter-evans/create-pull-request@v7
               with:
                   token: ${{ secrets.GECKO_PR_BOT_TOKEN }}
@@ -126,7 +151,7 @@ jobs:
                       After merging, tag a release in this repo (e.g. `vX.Y.Z`) to build/publish new images.
 
             - name: PR creation not permitted (manual fallback)
-              if: steps.changed.outputs.changed == 'true' && secrets.GECKO_PR_BOT_TOKEN == ''
+              if: steps.changed.outputs.changed == 'true' && steps.prtoken.outputs.has_token != 'true'
               shell: bash
               run: |
                   set -euo pipefail
