@@ -163,6 +163,35 @@ EOF
 
   (
     cd "$RUN_OUT"
+    shopt -s nullglob
+    tag_raw="${GITHUB_REF_NAME:-}"
+    tag=""
+    if [[ "$tag_raw" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+      tag="${tag_raw//\//-}"
+    fi
+    for old in image_*; do
+      new="$old"
+      new="$(printf '%s' "$new" | sed -E \
+        -e 's/^image_[0-9]{4}-[0-9]{2}-[0-9]{2}-/image-/' \
+        -e 's/^image-gecko-[0-9]{4}-[0-9]{2}-[0-9]{2}-/image-gecko-/' \
+      )"
+
+      if [ -n "$tag" ] && [[ "$new" == image-gecko-* ]] && [[ "$new" != image-gecko-${tag}-* ]]; then
+        new="image-gecko-${tag}-${new#image-gecko-}"
+      fi
+
+      if [ "$new" != "$old" ]; then
+        if [ -e "$new" ]; then
+          echo "ERROR: rename collision: '$old' -> '$new' already exists" >&2
+          exit 1
+        fi
+        mv "$old" "$new"
+      fi
+    done
+  )
+
+  (
+    cd "$RUN_OUT"
     ls -1 *.img *.img.xz *.zip *.bmap *.info 2>/dev/null | xargs -r sha256sum > SHA256SUMS || true
   )
 
