@@ -4,3 +4,4 @@ out/
 *.swo
 *.DS_Store
 README.local.md
+.tmp-pigen/

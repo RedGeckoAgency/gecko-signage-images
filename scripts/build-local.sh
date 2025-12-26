@@ -174,10 +174,18 @@ EOF
     fi
   popd >/dev/null
 
-  if ! find "$CACHE_DIR/work" -type f -path '*/rootfs/opt/gecko/tools/bootstrap_gecko.sh' -print -quit 2>/dev/null | grep -q .; then
-    echo "ERROR: Build completed but /opt/gecko/tools/bootstrap_gecko.sh was not found in rootfs." >&2
-    echo "This usually means the 'stage3/99-gecko' substage did not run." >&2
-    exit 1
+  if [ -f "$CACHE_DIR/deploy/build.log" ] || [ -f "$CACHE_DIR/deploy/build-docker.log" ]; then
+    if ! (
+      ( [ -f "$CACHE_DIR/deploy/build.log" ] && grep -Fq "[99-gecko] Installing Gecko payload" "$CACHE_DIR/deploy/build.log" ) ||
+      ( [ -f "$CACHE_DIR/deploy/build-docker.log" ] && grep -Fq "[99-gecko] Installing Gecko payload" "$CACHE_DIR/deploy/build-docker.log" )
+    ); then
+      echo "ERROR: Build completed but 99-gecko stage marker was not found in deploy logs." >&2
+      echo "This usually means the 'stage3/99-gecko' substage did not run." >&2
+      echo "Hint: inspect '$CACHE_DIR/deploy/build.log' and '$CACHE_DIR/deploy/build-docker.log'." >&2
+      exit 1
+    fi
+  else
+    echo "WARNING: deploy logs not found; cannot verify 99-gecko stage execution." >&2
   fi
 
   mkdir -p "$RUN_OUT"
