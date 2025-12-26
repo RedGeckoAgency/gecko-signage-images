@@ -1,7 +1,10 @@
 #!/bin/bash -e
 
+echo "[99-gecko] Installing Gecko payload into /opt/gecko and enabling gecko-bootstrap.service"
+
 install -d "${ROOTFS_DIR}/opt"
-cp -a "files/opt/gecko" "${ROOTFS_DIR}/opt/gecko"
+install -d "${ROOTFS_DIR}/opt/gecko"
+cp -a "files/opt/gecko/." "${ROOTFS_DIR}/opt/gecko/"
 
 if [ -f "${ROOTFS_DIR}/opt/gecko/tools/bootstrap_gecko.sh" ]; then
   chmod +x "${ROOTFS_DIR}/opt/gecko/tools/bootstrap_gecko.sh"

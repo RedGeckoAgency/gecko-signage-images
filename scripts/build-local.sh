@@ -108,6 +108,22 @@ EOF
   if [ -d "$WORKDIR/stages" ]; then
     cp -a "$WORKDIR/stages/." "$CACHE_DIR/stage3/"
   fi
+
+  if [ -d "$CACHE_DIR/stage3/99-gecko" ]; then
+    if command -v dos2unix >/dev/null 2>&1; then
+      find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r dos2unix >/dev/null 2>&1 || true
+    else
+      find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r sed -i 's/\r$//' || true
+    fi
+    find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r chmod +x || true
+
+    if [ ! -x "$CACHE_DIR/stage3/99-gecko/00-run.sh" ]; then
+      echo "ERROR: Injected stage '$CACHE_DIR/stage3/99-gecko/00-run.sh' is not executable; pi-gen will skip it." >&2
+      echo "Fix: ensure your checkout preserves execute bits or run build via this script (it will chmod +x)." >&2
+      exit 1
+    fi
+  fi
+
   mkdir -p "$CACHE_DIR/stage3/99-gecko/files/opt/gecko"
   cp -a "$WORKDIR/gecko/." "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/" || true
   [ -f "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh" ] && \
@@ -157,6 +173,12 @@ EOF
       exit 1
     fi
   popd >/dev/null
+
+  if ! find "$CACHE_DIR/work" -type f -path '*/rootfs/opt/gecko/tools/bootstrap_gecko.sh' -print -quit 2>/dev/null | grep -q .; then
+    echo "ERROR: Build completed but /opt/gecko/tools/bootstrap_gecko.sh was not found in rootfs." >&2
+    echo "This usually means the 'stage3/99-gecko' substage did not run." >&2
+    exit 1
+  fi
 
   mkdir -p "$RUN_OUT"
   cp -a "$CACHE_DIR/deploy/." "$RUN_OUT/" || true
