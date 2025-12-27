@@ -26,6 +26,8 @@ systemctl disable gdm.service gdm3.service 2>/dev/null || true
 systemctl disable sddm.service 2>/dev/null || true
 systemctl disable greetd.service 2>/dev/null || true
 systemctl disable userconfig.service 2>/dev/null || true
+systemctl disable userconf.service userconf-pi.service 2>/dev/null || true
+systemctl disable piwiz.service 2>/dev/null || true
 
 rm -f /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
 rm -f /etc/xdg/autostart/gnome-initial-setup.desktop 2>/dev/null || true

@@ -28,17 +28,6 @@ jobs:
                       pigen_ref: 2025-05-13-raspios-bookworm-arm64
 
         steps:
-            - name: Free disk space (optional but recommended)
-              uses: jlumbroso/free-disk-space@main
-              with:
-                  tool-cache: true
-                  android: true
-                  dotnet: true
-                  haskell: true
-                  large-packages: true
-                  docker-images: false
-                  swap-storage: true
-
             - name: Checkout
               uses: actions/checkout@v4
               with:

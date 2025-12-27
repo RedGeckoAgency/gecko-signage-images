@@ -76,10 +76,8 @@ EOF
   fi
 
   ensure_cfg "$CACHE_DIR/config" 'RELEASE' '"bookworm"'
-  if grep -q '^STAGE_LIST=' "$CACHE_DIR/config"; then
-    sed -i 's#^STAGE_LIST=.*#STAGE_LIST="stage0 stage1 stage2 stage3 stage4"#' "$CACHE_DIR/config"
-  else
-    echo 'STAGE_LIST="stage0 stage1 stage2 stage3 stage4"' >> "$CACHE_DIR/config"
+  if ! grep -q '^STAGE_LIST=' "$CACHE_DIR/config"; then
+    echo 'STAGE_LIST="stage0 stage1 stage2 stage3"' >> "$CACHE_DIR/config"
   fi
 
   ensure_cfg "$CACHE_DIR/config" 'APT_MIRROR' '"https://deb.debian.org/debian"'
