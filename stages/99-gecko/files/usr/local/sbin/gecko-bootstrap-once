@@ -22,3 +22,9 @@ touch "$STAMP"
 systemctl disable gecko-bootstrap.service || true
 rm -f /etc/systemd/system/gecko-bootstrap.service || true
 systemctl daemon-reload || true
+
+if [[ "${GECKO_NO_REBOOT:-0}" != "1" ]]; then
+  echo "Rebooting to enter Gecko kiosk..."
+  sleep 2
+  systemctl reboot || reboot || true
+fi
