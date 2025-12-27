@@ -14,6 +14,8 @@ fi
 install -D -m 0755 "files/usr/local/sbin/gecko-bootstrap-once"       "${ROOTFS_DIR}/usr/local/sbin/gecko-bootstrap-once"
 
 install -D -m 0644 "files/etc/systemd/system/gecko-bootstrap.service"       "${ROOTFS_DIR}/etc/systemd/system/gecko-bootstrap.service"
+install -d "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
+ln -sf ../gecko-bootstrap.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gecko-bootstrap.service"
 
 on_chroot << 'EOF'
 systemctl enable gecko-bootstrap.service

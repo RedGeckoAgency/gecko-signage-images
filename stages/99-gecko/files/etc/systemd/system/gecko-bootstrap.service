@@ -1,11 +1,17 @@
 [Unit]
 Description=Run Gecko bootstrap once
-After=multi-user.target
+After=multi-user.target network-online.target
+Wants=network-online.target
 
 [Service]
 Type=oneshot
 ExecStart=/usr/local/sbin/gecko-bootstrap-once
 RemainAfterExit=yes
+TimeoutStartSec=1800
+StandardOutput=journal+console
+StandardError=journal+console
+Restart=on-failure
+RestartSec=60
 
 [Install]
 WantedBy=multi-user.target
