@@ -2,6 +2,11 @@
 
 echo "[99-gecko] Installing Gecko payload into /opt/gecko and enabling gecko-bootstrap.service"
 
+install -D -m 0644 /dev/stdin "${ROOTFS_DIR}/etc/gecko-image-stage99.txt" <<'EOF'
+stage=99-gecko
+purpose=install /opt/gecko + first-boot bootstrap unit
+EOF
+
 install -d "${ROOTFS_DIR}/opt"
 install -d "${ROOTFS_DIR}/opt/gecko"
 cp -a "files/opt/gecko/." "${ROOTFS_DIR}/opt/gecko/"
