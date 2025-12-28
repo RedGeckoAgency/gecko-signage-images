@@ -2,14 +2,20 @@
 
 echo "[99-gecko] Installing Gecko payload into /opt/gecko and enabling gecko-bootstrap.service"
 
-install -D -m 0644 /dev/stdin "${ROOTFS_DIR}/etc/gecko-image-stage99.txt" <<'EOF'
+echo "Current directory: $(pwd)"
+ls -la files/opt/gecko || echo "files/opt/gecko missing!"
+
+cat > "${ROOTFS_DIR}/etc/gecko-image-stage99.txt" <<EOF
 stage=99-gecko
 purpose=install /opt/gecko + first-boot bootstrap unit
+date=$(date)
 EOF
+chmod 644 "${ROOTFS_DIR}/etc/gecko-image-stage99.txt"
 
 install -d "${ROOTFS_DIR}/opt"
 install -d "${ROOTFS_DIR}/opt/gecko"
-cp -a "files/opt/gecko/." "${ROOTFS_DIR}/opt/gecko/"
+
+cp -rv "files/opt/gecko/." "${ROOTFS_DIR}/opt/gecko/"
 
 if [ -f "${ROOTFS_DIR}/opt/gecko/tools/bootstrap_gecko.sh" ]; then
   sed -i 's/\r$//' "${ROOTFS_DIR}/opt/gecko/tools/"*.sh 2>/dev/null || true
@@ -23,6 +29,14 @@ install -d "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
 ln -sf ../gecko-bootstrap.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gecko-bootstrap.service"
 
 on_chroot << 'EOF'
+apt-get update
+apt-get install -y --no-install-recommends \
+  python3 python3-venv python3-pip \
+  git rsync ca-certificates curl \
+  xserver-xorg xinit openbox x11-xserver-utils xserver-xorg-legacy dbus-x11 \
+  unclutter fonts-dejavu \
+  chromium-browser || apt-get install -y --no-install-recommends chromium
+
 systemctl enable gecko-bootstrap.service
 
 systemctl set-default multi-user.target || true

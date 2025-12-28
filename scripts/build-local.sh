@@ -107,6 +107,13 @@ EOF
     cp -a "$WORKDIR/stages/." "$CACHE_DIR/stage3/"
   fi
 
+  for d in "$CACHE_DIR/stage3/"[0-8]*; do
+    if [ -d "$d" ]; then
+      touch "$d/SKIP"
+      echo "[$ARCHLBL] Skipped standard stage3 substage: $(basename "$d")"
+    fi
+  done
+
   if [ -d "$CACHE_DIR/stage3/99-gecko" ]; then
     if command -v dos2unix >/dev/null 2>&1; then
       find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r dos2unix >/dev/null 2>&1 || true
@@ -177,6 +184,26 @@ EOF
       ( [ -f "$CACHE_DIR/deploy/build.log" ] && grep -Fq "[99-gecko] Installing Gecko payload" "$CACHE_DIR/deploy/build.log" ) ||
       ( [ -f "$CACHE_DIR/deploy/build-docker.log" ] && grep -Fq "[99-gecko] Installing Gecko payload" "$CACHE_DIR/deploy/build-docker.log" )
     ); then
+  if [ -d "$CACHE_DIR/work/stage3/rootfs" ]; then
+    if [ ! -f "$CACHE_DIR/work/stage3/rootfs/opt/gecko/agent_main.py" ]; then
+      echo "ERROR: /opt/gecko/agent_main.py missing in stage3 rootfs!" >&2
+      echo "Contents of opt/gecko in rootfs:" >&2
+      ls -la "$CACHE_DIR/work/stage3/rootfs/opt/gecko" 2>/dev/null || echo "  (directory missing)" >&2
+      echo "Contents of opt in rootfs:" >&2
+      ls -la "$CACHE_DIR/work/stage3/rootfs/opt" 2>/dev/null || echo "  (directory missing)" >&2
+      exit 1
+    else
+      echo "[$ARCHLBL] Verified: /opt/gecko/agent_main.py exists in rootfs."
+    fi
+    
+    if [ ! -f "$CACHE_DIR/work/stage3/rootfs/etc/systemd/system/gecko-bootstrap.service" ]; then
+       echo "ERROR: gecko-bootstrap.service missing in stage3 rootfs!" >&2
+       exit 1
+    fi
+  else
+    echo "WARNING: work/stage3/rootfs not found. Could not verify file installation (maybe PRESERVE_CONTAINER=0?)" >&2
+  fi
+
       echo "ERROR: Build completed but 99-gecko stage marker was not found in deploy logs." >&2
       echo "This usually means the 'stage3/99-gecko' substage did not run." >&2
       echo "Hint: inspect '$CACHE_DIR/deploy/build.log' and '$CACHE_DIR/deploy/build-docker.log'." >&2
