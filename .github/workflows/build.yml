@@ -28,6 +28,17 @@ jobs:
                       pigen_ref: 2025-05-13-raspios-bookworm-arm64
 
         steps:
+            - name: Free disk space
+              run: |
+                  df -h
+                  sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                               /opt/hostedtoolcache/CodeQL /opt/hostedtoolcache/go \
+                               /usr/local/share/powershell /usr/lib/jvm || true
+                  docker system prune -af || true
+                  sudo apt-get clean
+                  sudo rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+                  df -h
+
             - name: Checkout
               uses: actions/checkout@v4
               with:
