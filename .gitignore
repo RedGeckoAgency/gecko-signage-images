@@ -5,3 +5,4 @@ out/
 *.DS_Store
 README.local.md
 .tmp-pigen/
+.logs/
