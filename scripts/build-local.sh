@@ -102,30 +102,37 @@ EOF
   echo "[$ARCHLBL] Effective config:"
   sed -n '1,200p' "$CACHE_DIR/config"
 
-  mkdir -p "$CACHE_DIR/stage3"
+  if grep -q "stage3" "$CACHE_DIR/config"; then
+     TARGET_STAGE="stage3"
+  else
+     TARGET_STAGE="stage2"
+  fi
+  echo "[$ARCHLBL] Injecting Gecko payload into $TARGET_STAGE (Lite mode: $([ "$TARGET_STAGE" = "stage2" ] && echo "yes" || echo "no"))"
+
+  mkdir -p "$CACHE_DIR/$TARGET_STAGE"
   if [ -d "$WORKDIR/stages" ]; then
-    cp -a "$WORKDIR/stages/." "$CACHE_DIR/stage3/"
+    cp -a "$WORKDIR/stages/." "$CACHE_DIR/$TARGET_STAGE/"
   fi
 
-  if [ -d "$CACHE_DIR/stage3/99-gecko" ]; then
+  if [ -d "$CACHE_DIR/$TARGET_STAGE/99-gecko" ]; then
     if command -v dos2unix >/dev/null 2>&1; then
-      find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r dos2unix >/dev/null 2>&1 || true
+      find "$CACHE_DIR/$TARGET_STAGE/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r dos2unix >/dev/null 2>&1 || true
     else
-      find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r sed -i 's/\r$//' || true
+      find "$CACHE_DIR/$TARGET_STAGE/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r sed -i 's/\r$//' || true
     fi
-    find "$CACHE_DIR/stage3/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r chmod +x || true
+    find "$CACHE_DIR/$TARGET_STAGE/99-gecko" -maxdepth 1 -type f -name "*.sh" -print0 | xargs -0 -r chmod +x || true
 
-    if [ ! -x "$CACHE_DIR/stage3/99-gecko/00-run.sh" ]; then
-      echo "ERROR: Injected stage '$CACHE_DIR/stage3/99-gecko/00-run.sh' is not executable; pi-gen will skip it." >&2
+    if [ ! -x "$CACHE_DIR/$TARGET_STAGE/99-gecko/00-run.sh" ]; then
+      echo "ERROR: Injected stage '$CACHE_DIR/$TARGET_STAGE/99-gecko/00-run.sh' is not executable; pi-gen will skip it." >&2
       echo "Fix: ensure your checkout preserves execute bits or run build via this script (it will chmod +x)." >&2
       exit 1
     fi
   fi
 
-  mkdir -p "$CACHE_DIR/stage3/99-gecko/files/opt/gecko"
-  cp -a "$WORKDIR/gecko/." "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/" || true
-  [ -f "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh" ] && \
-    chmod +x "$CACHE_DIR/stage3/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh"
+  mkdir -p "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko"
+  cp -a "$WORKDIR/gecko/." "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/" || true
+  [ -f "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh" ] && \
+    chmod +x "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh"
 
   mkdir -p "$CACHE_DIR/stage0/00-apt-tuning"
   cat > "$CACHE_DIR/stage0/00-apt-tuning/00-run.sh" <<'EOF'
@@ -178,7 +185,7 @@ EOF
       ( [ -f "$CACHE_DIR/deploy/build-docker.log" ] && grep -Fq "[99-gecko] Installing Gecko payload" "$CACHE_DIR/deploy/build-docker.log" )
     ); then
       echo "ERROR: Build completed but 99-gecko stage marker was not found in deploy logs." >&2
-      echo "This usually means the 'stage3/99-gecko' substage did not run." >&2
+      echo "This usually means the '$TARGET_STAGE/99-gecko' substage did not run." >&2
       echo "Hint: inspect '$CACHE_DIR/deploy/build.log' and '$CACHE_DIR/deploy/build-docker.log'." >&2
       exit 1
     fi
@@ -186,29 +193,28 @@ EOF
     echo "WARNING: deploy logs not found; cannot verify 99-gecko stage execution." >&2
   fi
 
-  # Collect pi-gen logs for artifact upload (helps remote debugging)
   mkdir -p "$OUTDIR/logs-$ARCHLBL"
   [ -f "$CACHE_DIR/deploy/build.log" ] && cp "$CACHE_DIR/deploy/build.log" "$OUTDIR/logs-$ARCHLBL/build.log"
   [ -f "$CACHE_DIR/deploy/build-docker.log" ] && cp "$CACHE_DIR/deploy/build-docker.log" "$OUTDIR/logs-$ARCHLBL/build-docker.log"
 
-  if [ -d "$CACHE_DIR/work/stage3/rootfs" ]; then
-    if [ ! -f "$CACHE_DIR/work/stage3/rootfs/opt/gecko/agent_main.py" ]; then
-      echo "ERROR: /opt/gecko/agent_main.py missing in stage3 rootfs!" >&2
+  if [ -d "$CACHE_DIR/work/$TARGET_STAGE/rootfs" ]; then
+    if [ ! -f "$CACHE_DIR/work/$TARGET_STAGE/rootfs/opt/gecko/agent_main.py" ]; then
+      echo "ERROR: /opt/gecko/agent_main.py missing in $TARGET_STAGE rootfs!" >&2
       echo "Contents of opt/gecko in rootfs:" >&2
-      ls -la "$CACHE_DIR/work/stage3/rootfs/opt/gecko" 2>/dev/null || echo "  (directory missing)" >&2
+      ls -la "$CACHE_DIR/work/$TARGET_STAGE/rootfs/opt/gecko" 2>/dev/null || echo "  (directory missing)" >&2
       echo "Contents of opt in rootfs:" >&2
-      ls -la "$CACHE_DIR/work/stage3/rootfs/opt" 2>/dev/null || echo "  (directory missing)" >&2
+      ls -la "$CACHE_DIR/work/$TARGET_STAGE/rootfs/opt" 2>/dev/null || echo "  (directory missing)" >&2
       exit 1
     else
       echo "[$ARCHLBL] Verified: /opt/gecko/agent_main.py exists in rootfs."
     fi
     
-     if [ ! -f "$CACHE_DIR/work/stage3/rootfs/etc/systemd/system/gecko-bootstrap.service" ]; then
-       echo "ERROR: gecko-bootstrap.service missing in stage3 rootfs!" >&2
+     if [ ! -f "$CACHE_DIR/work/$TARGET_STAGE/rootfs/etc/systemd/system/gecko-bootstrap.service" ]; then
+       echo "ERROR: gecko-bootstrap.service missing in $TARGET_STAGE rootfs!" >&2
        exit 1
     fi
   else
-    echo "WARNING: work/stage3/rootfs not found. Could not verify file installation (maybe PRESERVE_CONTAINER=0?)" >&2
+    echo "WARNING: work/$TARGET_STAGE/rootfs not found. Could not verify file installation (maybe PRESERVE_CONTAINER=0?)" >&2
   fi
 
   mkdir -p "$RUN_OUT"

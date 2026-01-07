@@ -34,7 +34,8 @@ apt-get install -y --no-install-recommends \
   python3 python3-venv python3-pip \
   git rsync ca-certificates curl \
   xserver-xorg xinit openbox x11-xserver-utils xserver-xorg-legacy dbus-x11 \
-  unclutter fonts-dejavu \
+  unclutter fonts-dejavu fonts-liberation \
+  libgles2-mesa libgl1-mesa-dri \
   chromium-browser || apt-get install -y --no-install-recommends chromium
 
 systemctl enable gecko-bootstrap.service
