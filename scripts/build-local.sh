@@ -1,4 +1,15 @@
 #!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────
+#  Geckos image builder — used by both CI and local builds.
+#
+#  Environment variables (all optional):
+#    ONLY_ARCH        armhf | arm64 | both  (default: both)
+#    CLEAN_BUILD      1 → wipe cached pi-gen work dirs and force
+#                     a full rebuild from scratch (default: 0)
+#    PIGEN_REF_ARMHF  pi-gen tag/branch for 32-bit build
+#    PIGEN_REF_ARM64  pi-gen tag/branch for 64-bit build
+#    MAX_RETRIES      build retry count (default: 3)
+# ──────────────────────────────────────────────────────────────
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -47,15 +58,45 @@ build_one () {
 
   echo
   echo "=== [$ARCHLBL] Setup pi-gen ($REF) at $CACHE_DIR ==="
-  rm -rf "$CACHE_DIR"
-  git -c core.autocrlf=false clone --depth=1 https://github.com/RPi-Distro/pi-gen.git "$CACHE_DIR"
-  ( cd "$CACHE_DIR" && git fetch --tags --depth=1 && git checkout -B gecko-build "$REF" )
+
+  # --- Smart caching: reuse pi-gen clone + work dir for faster rebuilds ---
+  if [[ "${CLEAN_BUILD:-0}" == "1" ]]; then
+    echo "[$ARCHLBL] CLEAN_BUILD=1: forcing full rebuild"
+    rm -rf "$CACHE_DIR"
+  fi
+
+  if [ -d "$CACHE_DIR/.git" ]; then
+    _cached_ref=$(git -C "$CACHE_DIR" describe --tags --always 2>/dev/null || echo "none")
+    if [ "$_cached_ref" = "$REF" ]; then
+      echo "[$ARCHLBL] Reusing cached pi-gen clone (ref: $REF)"
+      # Keep work dir for CONTINUE, clear deploy for fresh output
+      rm -rf "$CACHE_DIR/deploy"
+    else
+      echo "[$ARCHLBL] Pi-gen ref changed ($_cached_ref -> $REF), re-cloning..."
+      # Preserve work dir across ref changes for partial reuse
+      if [ -d "$CACHE_DIR/work" ]; then
+        mv "$CACHE_DIR/work" "$CACHE_DIR.work.bak" 2>/dev/null || true
+      fi
+      rm -rf "$CACHE_DIR"
+    fi
+  fi
+
+  if [ ! -d "$CACHE_DIR/.git" ]; then
+    git -c core.autocrlf=false clone --depth=1 https://github.com/RPi-Distro/pi-gen.git "$CACHE_DIR"
+    ( cd "$CACHE_DIR" && git fetch --tags --depth=1 && git checkout -B gecko-build "$REF" )
+    # Restore backed-up work directory if available
+    if [ -d "$CACHE_DIR.work.bak" ]; then
+      mv "$CACHE_DIR.work.bak" "$CACHE_DIR/work"
+      echo "[$ARCHLBL] Restored cached work directory for incremental rebuild"
+    fi
+  fi
+
   echo "[$ARCHLBL] pi-gen ref: $(git -C "$CACHE_DIR" describe --tags --always || git -C "$CACHE_DIR" rev-parse --short HEAD)"
 
   if [ -f "$WORKDIR/gecko/image/config" ]; then
     echo "[$ARCHLBL] Using private config from gecko/image/config"
     cp -a "$WORKDIR/gecko/image/config" "$CACHE_DIR/config"
-  elif [ -d "$TEMPLATE_CONFIG_DIR" ]; then
+  elif [ -f "$TEMPLATE_CONFIG_DIR" ]; then
     echo "[$ARCHLBL] Using public template config"
     cp -a "$TEMPLATE_CONFIG_DIR" "$CACHE_DIR/config"
   else
@@ -108,6 +149,14 @@ EOF
      TARGET_STAGE="stage2"
   fi
   echo "[$ARCHLBL] Injecting Gecko payload into $TARGET_STAGE (Lite mode: $([ "$TARGET_STAGE" = "stage2" ] && echo "yes" || echo "no"))"
+
+  # Force re-execution of the stage containing gecko code.
+  # Earlier stages (stage0, stage1) remain marked complete so CONTINUE=1
+  # skips them — this is the main speedup for iterative gecko development.
+  if [ -d "$CACHE_DIR/work" ]; then
+    echo "[$ARCHLBL] Clearing SKIP marker for $TARGET_STAGE (forces re-run of gecko substage)"
+    rm -f "$CACHE_DIR/work/${TARGET_STAGE}/SKIP" 2>/dev/null || true
+  fi
 
   mkdir -p "$CACHE_DIR/$TARGET_STAGE"
   if [ -d "$WORKDIR/stages" ]; then

@@ -1,3 +1,6 @@
 [submodule "gecko"]
 	path = gecko
 	url = git@github.com:RedGeckoAgency/gecko-signage-agent.git
+[submodule "dashboard"]
+	path = dashboard
+	url = git@github.com:MoKhaled112/Gecko-Signage.git
