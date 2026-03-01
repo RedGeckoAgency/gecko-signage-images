@@ -1,4 +1,4 @@
-name: Build & Release Gecko OS Images
+name: Build & Release Geckos Images
 
 on:
     push:
@@ -10,7 +10,7 @@ permissions:
     contents: write
 
 concurrency:
-    group: gecko-os-${{ github.ref }}
+    group: geckos-${{ github.ref }}
     cancel-in-progress: false
 
 jobs:

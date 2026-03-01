@@ -2,7 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "Gecko build-local $(date --iso-8601=seconds)"
+echo "Geckos build-local $(date --iso-8601=seconds)"
 
 PIGEN_REF_ARMHF="${PIGEN_REF_ARMHF:-2025-05-13-raspios-bookworm-armhf}"
 PIGEN_REF_ARM64="${PIGEN_REF_ARM64:-2025-05-13-raspios-bookworm-arm64}"
@@ -61,7 +61,7 @@ build_one () {
   else
     echo "[$ARCHLBL] Creating minimal config"
     cat > "$CACHE_DIR/config" <<'EOF'
-IMG_NAME="gecko-os"
+  IMG_NAME="geckos"
 ENABLE_SSH=1
 # Desktop build includes stage4:
 STAGE_LIST="stage0 stage1 stage2 stage3 stage4"
@@ -96,7 +96,7 @@ EOF
   {
     echo
     echo "# appended by build script"
-    echo "IMG_NAME=\"gecko-${REF}\""
+    echo "IMG_NAME=\"geckos-${REF}\""
   } >> "$CACHE_DIR/config"
 
   echo "[$ARCHLBL] Effective config:"
@@ -232,11 +232,11 @@ EOF
       new="$old"
       new="$(printf '%s' "$new" | sed -E \
         -e 's/^image_[0-9]{4}-[0-9]{2}-[0-9]{2}-/image-/' \
-        -e 's/^image-gecko-[0-9]{4}-[0-9]{2}-[0-9]{2}-/image-gecko-/' \
+        -e 's/^image-geckos-[0-9]{4}-[0-9]{2}-[0-9]{2}-/image-geckos-/' \
       )"
 
-      if [ -n "$tag" ] && [[ "$new" == image-gecko-* ]] && [[ "$new" != image-gecko-${tag}-* ]]; then
-        new="image-gecko-${tag}-${new#image-gecko-}"
+      if [ -n "$tag" ] && [[ "$new" == image-geckos-* ]] && [[ "$new" != image-geckos-${tag}-* ]]; then
+        new="image-geckos-${tag}-${new#image-geckos-}"
       fi
 
       if [ "$new" != "$old" ]; then
