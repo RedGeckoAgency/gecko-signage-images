@@ -6,3 +6,4 @@ out/
 README.local.md
 .tmp-pigen/
 .logs/
+.context/
