@@ -44,7 +44,7 @@ jobs:
               with:
                   submodules: false
                   ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
-                  persist-credentials: false
+                  persist-credentials: true
                   ssh-strict: false
                   fetch-depth: 0
 
