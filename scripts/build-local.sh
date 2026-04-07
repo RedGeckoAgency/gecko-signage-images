@@ -26,7 +26,7 @@ if command -v apt-get >/dev/null 2>&1; then
     git rsync xz-utils bmap-tools qemu-user-static pigz dos2unix >/dev/null || true
 fi
 
-git submodule update --init --recursive
+git submodule update --init --recursive gecko
 
 WORKDIR="$(pwd)"
 OUTDIR="$WORKDIR/out"

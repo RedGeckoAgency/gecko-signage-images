@@ -42,11 +42,14 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v4
               with:
-                  submodules: recursive
+                  submodules: false
                   ssh-key: ${{ secrets.GECKO_DEPLOY_KEY }}
                   persist-credentials: false
                   ssh-strict: false
                   fetch-depth: 0
+
+            - name: Init gecko submodule only
+              run: git submodule update --init --recursive gecko
 
             - name: Set up dependencies
               run: |
