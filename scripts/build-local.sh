@@ -26,7 +26,11 @@ if command -v apt-get >/dev/null 2>&1; then
     git rsync xz-utils bmap-tools qemu-user-static pigz dos2unix >/dev/null || true
 fi
 
-git submodule update --init --recursive gecko
+# In CI the workflow pre-initialises the gecko submodule with SSH credentials,
+# so skip the fetch here and just verify the directory exists.
+if [ ! -d "gecko/.git" ]; then
+  git submodule update --init --recursive gecko
+fi
 
 WORKDIR="$(pwd)"
 OUTDIR="$WORKDIR/out"
