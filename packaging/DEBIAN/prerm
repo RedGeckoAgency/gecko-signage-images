@@ -1,0 +1,7 @@
+#!/bin/bash
+set -e
+
+# ── prerm: runs before gecko-agent .deb is removed/upgraded ──
+
+echo "[gecko-agent] Stopping gecko-agent service..."
+systemctl stop gecko-agent || true

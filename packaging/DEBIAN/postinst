@@ -1,0 +1,21 @@
+#!/bin/bash
+set -e
+
+# ── postinst: runs after gecko-agent .deb is installed/upgraded ──
+
+# Create venv if it doesn't exist
+if [ ! -d /opt/gecko/.venv ]; then
+    echo "[gecko-agent] Creating Python virtual environment..."
+    python3 -m venv /opt/gecko/.venv
+fi
+
+# Install/update pip dependencies
+echo "[gecko-agent] Installing Python dependencies..."
+/opt/gecko/.venv/bin/pip install -q --no-cache-dir -r /opt/gecko/requirements.txt
+
+# Reload systemd and restart the service
+echo "[gecko-agent] Restarting gecko-agent service..."
+systemctl daemon-reload
+systemctl restart gecko-agent || true
+
+echo "[gecko-agent] Update complete."

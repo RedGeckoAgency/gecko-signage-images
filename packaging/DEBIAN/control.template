@@ -1,0 +1,10 @@
+Package: gecko-agent
+Version: {{VERSION}}
+Architecture: armhf
+Maintainer: Red Gecko Agency <redgeckoagency@gmail.com>
+Description: Gecko Digital Signage Agent
+ Headless signage agent for Raspberry Pi devices.
+ Manages enrollment, content sync, health monitoring, and kiosk browser.
+Depends: python3 (>= 3.9), python3-venv
+Section: misc
+Priority: optional

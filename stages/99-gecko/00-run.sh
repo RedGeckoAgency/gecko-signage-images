@@ -28,6 +28,35 @@ install -D -m 0644 "files/etc/systemd/system/gecko-bootstrap.service"       "${R
 install -d "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
 ln -sf ../gecko-bootstrap.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gecko-bootstrap.service"
 
+# ── APT Repository Config ──
+echo "[99-gecko] Configuring Gecko APT repository..."
+install -d "${ROOTFS_DIR}/etc/apt/sources.list.d"
+install -d "${ROOTFS_DIR}/etc/apt/apt.conf.d"
+install -d "${ROOTFS_DIR}/usr/share/keyrings"
+
+# 1. GPG Public Key (for package verification)
+if [ -f "files/usr/share/keyrings/gecko-repo.gpg" ]; then
+  install -m 0644 "files/usr/share/keyrings/gecko-repo.gpg" "${ROOTFS_DIR}/usr/share/keyrings/"
+else
+  echo "WARNING: files/usr/share/keyrings/gecko-repo.gpg missing! APT repo will fail signature checks."
+fi
+
+# 2. APT Source List
+cat > "${ROOTFS_DIR}/etc/apt/sources.list.d/gecko.list" <<'EOF'
+deb [signed-by=/usr/share/keyrings/gecko-repo.gpg] https://repo.geckosignage.com stable main
+EOF
+chmod 644 "${ROOTFS_DIR}/etc/apt/sources.list.d/gecko.list"
+
+# 3. APT Auth Token (needs to be replaced with real token during build/deploy)
+if [ -f "files/etc/apt/apt.conf.d/99-gecko-auth" ]; then
+  install -m 0600 "files/etc/apt/apt.conf.d/99-gecko-auth" "${ROOTFS_DIR}/etc/apt/apt.conf.d/"
+else
+  echo "WARNING: files/etc/apt/apt.conf.d/99-gecko-auth missing! APT repo will return 403."
+  # Create a dummy one so the file exists with right permissions
+  echo 'Acquire::https::repo.geckosignage.com::Header "X-Repo-Token: DUMMY_TOKEN";' > "${ROOTFS_DIR}/etc/apt/apt.conf.d/99-gecko-auth"
+  chmod 600 "${ROOTFS_DIR}/etc/apt/apt.conf.d/99-gecko-auth"
+fi
+
 on_chroot << 'EOF'
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -51,6 +80,9 @@ systemctl disable piwiz.service 2>/dev/null || true
 
 rm -f /etc/xdg/autostart/piwiz.desktop 2>/dev/null || true
 rm -f /etc/xdg/autostart/gnome-initial-setup.desktop 2>/dev/null || true
+
+# Set default WLAN Country to US to avoid WPA3/connection issues
+raspi-config nonint do_wifi_country US
 EOF
 
 install -D -m 0644 /dev/stdin "${ROOTFS_DIR}/etc/ssh/sshd_config.d/99-gecko.conf" <<'CONF'
