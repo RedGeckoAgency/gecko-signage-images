@@ -3,7 +3,7 @@ name: Publish .deb to APT Repo
 on:
   push:
     tags:
-      - "agent-v*.*.*"
+      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version_override:
