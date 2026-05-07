@@ -4,23 +4,29 @@ set -euo pipefail
 #  build-deb.sh — Build a .deb package for gecko-agent
 #
 #  Usage:
-#    ./scripts/build-deb.sh [--arch armhf|arm64] [--out <dir>]
+#    ./scripts/build-deb.sh --version <X.Y.Z> [--arch armhf|arm64] [--out <dir>]
 #
-#  Reads version from gecko/agent_core/version.py
 #  Outputs: out/deb/gecko-agent_<version>-1_<arch>.deb
 # ──────────────────────────────────────────────────────────────
 cd "$(dirname "$0")/.."
 
 ARCH="armhf"
 OUT_DIR="out/deb"
+VERSION=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --arch) ARCH="$2"; shift 2 ;;
-        --out)  OUT_DIR="$2"; shift 2 ;;
-        *)      echo "Unknown option: $1"; exit 1 ;;
+        --arch)    ARCH="$2"; shift 2 ;;
+        --out)     OUT_DIR="$2"; shift 2 ;;
+        --version) VERSION="$2"; shift 2 ;;
+        *)         echo "Unknown option: $1"; exit 1 ;;
     esac
 done
+
+if [ -z "$VERSION" ]; then
+    echo "ERROR: --version is required (e.g. --version 1.3.0)" >&2
+    exit 1
+fi
 
 GECKO_SRC="gecko"
 if [ ! -d "$GECKO_SRC" ]; then
@@ -28,22 +34,6 @@ if [ ! -d "$GECKO_SRC" ]; then
     exit 1
 fi
 
-# ── Detect Python ──
-if command -v python3 >/dev/null 2>&1; then
-    PY_CMD="python3"
-elif command -v python >/dev/null 2>&1; then
-    PY_CMD="python"
-else
-    echo "ERROR: Python not found. Please install Python and ensure it is in your PATH." >&2
-    exit 1
-fi
-
-# ── Extract version ──
-VERSION=$($PY_CMD -c "
-import re, sys
-m = re.search(r'AGENT_VERSION\s*=\s*\"([^\"]+)\"', open('$GECKO_SRC/agent_core/version.py').read())
-print(m.group(1) if m else sys.exit(1))
-")
 DEB_VERSION="${VERSION}-1"
 PKG_NAME="gecko-agent_${DEB_VERSION}_${ARCH}"
 echo "Building: ${PKG_NAME}.deb (v${VERSION})"
@@ -82,9 +72,12 @@ find "$PKG_ROOT/opt/gecko" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/nu
 find "$PKG_ROOT/opt/gecko" -name "*.pyc" -delete 2>/dev/null || true
 rm -rf "$PKG_ROOT/opt/gecko/tests" 2>/dev/null || true
 
-# ── Copy systemd service ──
+# ── Copy systemd service & bake version into Environment= ──
 if [ -f "$GECKO_SRC/systemd/gecko-agent.service" ]; then
-    cp "$GECKO_SRC/systemd/gecko-agent.service" "$PKG_ROOT/etc/systemd/system/"
+    UNIT_DST="$PKG_ROOT/etc/systemd/system/gecko-agent.service"
+    cp "$GECKO_SRC/systemd/gecko-agent.service" "$UNIT_DST"
+    # Insert Environment=GECKO_AGENT_VERSION=<X> right after [Service]
+    sed -i "/^\[Service\]/a Environment=GECKO_AGENT_VERSION=${VERSION}" "$UNIT_DST"
 fi
 
 # ── Write build manifest ──

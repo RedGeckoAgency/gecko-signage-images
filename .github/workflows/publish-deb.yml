@@ -5,10 +5,6 @@ on:
     tags:
       - "v*.*.*"
   workflow_dispatch:
-    inputs:
-      version_override:
-        description: "Override version (leave empty to read from version.py)"
-        required: false
 
 permissions:
   id-token: write
@@ -47,37 +43,32 @@ jobs:
           ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
           git submodule update --init --recursive gecko
 
-      - name: Extract version
-        id: version
-        run: |
-          if [ -n "${{ github.event.inputs.version_override }}" ]; then
-            VERSION="${{ github.event.inputs.version_override }}"
-          else
-            VERSION=$(python3 -c "
-          import re, sys
-          m = re.search(r'AGENT_VERSION\s*=\"([^\"]+)\"', open('gecko/agent_core/version.py').read())
-          print(m.group(1) if m else sys.exit(1))
-          ")
-          fi
-          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
-          echo "deb_version=${VERSION}-1" >> "$GITHUB_OUTPUT"
-          echo "Version: ${VERSION}"
-
       - name: Install build tools
         run: |
           sudo apt-get update -y
           sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils gnupg2
 
+      - name: Resolve version
+        id: version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="0.0.0-dev-${{ github.run_number }}"
+          fi
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Resolved version: ${VERSION}"
+
       # ── Build .deb for armhf ──
       - name: Build .deb (armhf)
         run: |
           chmod +x scripts/build-deb.sh
-          ./scripts/build-deb.sh --arch armhf --out out/deb
+          ./scripts/build-deb.sh --arch armhf --out out/deb --version "${{ steps.version.outputs.version }}"
 
       # ── Build .deb for arm64 ──
       - name: Build .deb (arm64)
         run: |
-          ./scripts/build-deb.sh --arch arm64 --out out/deb
+          ./scripts/build-deb.sh --arch arm64 --out out/deb --version "${{ steps.version.outputs.version }}"
 
       - name: List built packages
         run: ls -lh out/deb/
