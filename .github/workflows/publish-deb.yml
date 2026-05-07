@@ -11,6 +11,7 @@ on:
         required: false
 
 permissions:
+  id-token: write
   contents: read
 
 concurrency:
@@ -29,6 +30,12 @@ jobs:
         with:
           submodules: false
           fetch-depth: 0
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
 
       - name: Init gecko submodule
         env:
@@ -85,16 +92,12 @@ jobs:
 
       # ── Build APT repository index ──
       - name: Download existing pool from S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-2
         run: |
           mkdir -p repo/pool/main/g/gecko-agent
           mkdir -p repo/dists/stable/main/binary-armhf
           mkdir -p repo/dists/stable/main/binary-arm64
           # Download existing packages (so the repo has all versions)
-          aws s3 sync "s3://${{ secrets.APT_REPO_BUCKET }}/pool/" repo/pool/ --quiet || true
+          aws s3 sync "s3://${{ vars.S3_BUCKET }}/pool/" repo/pool/ --quiet || true
 
       - name: Copy new .deb into pool
         run: |
@@ -137,28 +140,20 @@ jobs:
 
       # ── Upload to S3 ──
       - name: Sync repository to S3
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-2
         run: |
           # Upload pool (packages) — keep old versions
-          aws s3 sync repo/pool/ "s3://${{ secrets.APT_REPO_BUCKET }}/pool/" --quiet
+          aws s3 sync repo/pool/ "s3://${{ vars.S3_BUCKET }}/pool/" --quiet
 
           # Upload dists (index + signatures) — overwrite
-          aws s3 sync repo/dists/ "s3://${{ secrets.APT_REPO_BUCKET }}/dists/" --delete --quiet
+          aws s3 sync repo/dists/ "s3://${{ vars.S3_BUCKET }}/dists/" --delete --quiet
 
           echo "Published gecko-agent ${{ steps.version.outputs.version }} to APT repo"
 
       # ── Invalidate CloudFront cache ──
       - name: Invalidate CloudFront cache
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-2
         run: |
           aws cloudfront create-invalidation \
-            --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
             --paths "/dists/*" "/pool/main/g/gecko-agent/*"
 
       # ── Upload .deb as workflow artifact ──
