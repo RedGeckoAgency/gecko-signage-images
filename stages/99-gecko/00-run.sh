@@ -17,6 +17,11 @@ install -d "${ROOTFS_DIR}/opt/gecko"
 
 cp -rv "files/opt/gecko/." "${ROOTFS_DIR}/opt/gecko/"
 
+# ── Write VERSION file from git tag ──
+IMAGE_VERSION=$(git -C "$(dirname "$0")/../.." describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+echo "${IMAGE_VERSION}" > "${ROOTFS_DIR}/opt/gecko/VERSION"
+echo "[99-gecko] Wrote VERSION file: ${IMAGE_VERSION}"
+
 if [ -f "${ROOTFS_DIR}/opt/gecko/tools/bootstrap_gecko.sh" ]; then
   sed -i 's/\r$//' "${ROOTFS_DIR}/opt/gecko/tools/"*.sh 2>/dev/null || true
   chmod +x "${ROOTFS_DIR}/opt/gecko/tools/"*.sh 2>/dev/null || true

@@ -90,6 +90,9 @@ built=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 git_sha=${GIT_SHA}
 EOF
 
+# ── Write VERSION file (read by agent as fallback) ──
+echo "${VERSION}" > "$PKG_ROOT/opt/gecko/VERSION"
+
 # ── Build .deb ──
 mkdir -p "$OUT_DIR"
 dpkg-deb --build --root-owner-group "$PKG_ROOT" "$OUT_DIR/${PKG_NAME}.deb"
