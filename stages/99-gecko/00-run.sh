@@ -54,11 +54,16 @@ chmod 644 "${ROOTFS_DIR}/etc/apt/sources.list.d/gecko.list"
 
 # 3. APT Basic Auth credentials (standard APT auth.conf format)
 # APT sends these as HTTP Basic Auth, which the Lambda@Edge validates.
-REPO_TOKEN="${GECKO_REPO_TOKEN:-DUMMY_TOKEN}"
-mkdir -p "${ROOTFS_DIR}/etc/apt/auth.conf.d"
-echo "machine d3a03e0wzyqfqi.cloudfront.net login token password ${REPO_TOKEN}" \
-  > "${ROOTFS_DIR}/etc/apt/auth.conf.d/gecko.conf"
-chmod 600 "${ROOTFS_DIR}/etc/apt/auth.conf.d/gecko.conf"
+if [ -f "files/etc/apt/auth.conf.d/gecko.conf" ]; then
+  mkdir -p "${ROOTFS_DIR}/etc/apt/auth.conf.d"
+  install -m 0600 "files/etc/apt/auth.conf.d/gecko.conf" "${ROOTFS_DIR}/etc/apt/auth.conf.d/"
+else
+  echo "WARNING: files/etc/apt/auth.conf.d/gecko.conf missing! APT repo will return 403."
+  mkdir -p "${ROOTFS_DIR}/etc/apt/auth.conf.d"
+  echo "machine d3a03e0wzyqfqi.cloudfront.net login token password DUMMY_TOKEN" \
+    > "${ROOTFS_DIR}/etc/apt/auth.conf.d/gecko.conf"
+  chmod 600 "${ROOTFS_DIR}/etc/apt/auth.conf.d/gecko.conf"
+fi
 # Remove old header-based auth file if it exists
 rm -f "${ROOTFS_DIR}/etc/apt/apt.conf.d/99-gecko-auth"
 
