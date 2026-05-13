@@ -40,8 +40,12 @@ install -d "${ROOTFS_DIR}/etc/apt/apt.conf.d"
 install -d "${ROOTFS_DIR}/usr/share/keyrings"
 
 # 1. GPG Public Key (for package verification)
+# Always pipe through gpg --dearmor: works for both ASCII-armored and binary input.
+# APT requires a binary (non-armored) keyring at /usr/share/keyrings/*.gpg
 if [ -f "files/usr/share/keyrings/gecko-repo.gpg" ]; then
-  install -m 0644 "files/usr/share/keyrings/gecko-repo.gpg" "${ROOTFS_DIR}/usr/share/keyrings/"
+  gpg --dearmor < "files/usr/share/keyrings/gecko-repo.gpg" \
+    > "${ROOTFS_DIR}/usr/share/keyrings/gecko-repo.gpg"
+  chmod 0644 "${ROOTFS_DIR}/usr/share/keyrings/gecko-repo.gpg"
 else
   echo "WARNING: files/usr/share/keyrings/gecko-repo.gpg missing! APT repo will fail signature checks."
 fi
