@@ -135,8 +135,11 @@ jobs:
           # Upload pool (packages) — keep old versions
           aws s3 sync repo/pool/ "s3://${{ vars.S3_BUCKET }}/pool/" --quiet
 
-          # Upload dists (index + signatures) — overwrite
-          aws s3 sync repo/dists/ "s3://${{ vars.S3_BUCKET }}/dists/" --delete --quiet
+          # Upload dists (index + signatures) — overwrite, never cache
+          aws s3 sync repo/dists/ "s3://${{ vars.S3_BUCKET }}/dists/" \
+            --delete \
+            --cache-control "no-store, no-cache, must-revalidate" \
+            --quiet
 
           echo "Published gecko-agent ${{ steps.version.outputs.version }} to APT repo"
 
