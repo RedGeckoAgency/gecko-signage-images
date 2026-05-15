@@ -72,13 +72,14 @@ find "$PKG_ROOT/opt/gecko" -type d -name __pycache__ -exec rm -rf {} + 2>/dev/nu
 find "$PKG_ROOT/opt/gecko" -name "*.pyc" -delete 2>/dev/null || true
 rm -rf "$PKG_ROOT/opt/gecko/tests" 2>/dev/null || true
 
-# ── Copy systemd service & bake version into Environment= ──
+# ── Copy systemd service ──
 if [ -f "$GECKO_SRC/systemd/gecko-agent.service" ]; then
     UNIT_DST="$PKG_ROOT/etc/systemd/system/gecko-agent.service"
     cp "$GECKO_SRC/systemd/gecko-agent.service" "$UNIT_DST"
-    # Insert Environment=GECKO_AGENT_VERSION=<X> right after [Service]
-    sed -i "/^\[Service\]/a Environment=GECKO_AGENT_VERSION=${VERSION}" "$UNIT_DST"
 fi
+
+# ── Write VERSION file to disk ──
+echo "${VERSION}" > "$PKG_ROOT/opt/gecko/VERSION"
 
 # ── Write build manifest ──
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
