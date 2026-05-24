@@ -78,9 +78,6 @@ if [ -f "$GECKO_SRC/systemd/gecko-agent.service" ]; then
     cp "$GECKO_SRC/systemd/gecko-agent.service" "$UNIT_DST"
 fi
 
-# ── Write VERSION file to disk ──
-echo "${VERSION}" > "$PKG_ROOT/opt/gecko/VERSION"
-
 # ── Write build manifest ──
 GIT_SHA=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 cat > "$PKG_ROOT/opt/gecko/.deb-manifest" <<EOF
@@ -91,7 +88,7 @@ built=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 git_sha=${GIT_SHA}
 EOF
 
-# ── Write VERSION file (read by agent as fallback) ──
+# ── Write VERSION file (read by agent as fallback when dpkg-query unavailable) ──
 echo "${VERSION}" > "$PKG_ROOT/opt/gecko/VERSION"
 
 # ── Build .deb ──

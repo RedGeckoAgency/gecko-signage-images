@@ -187,6 +187,18 @@ EOF
   [ -f "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh" ] && \
     chmod +x "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh"
 
+  # ── Write VERSION into the staging area ──
+  # This runs in the host (outside Docker) where $WORKDIR is the gecko-signage-images
+  # git repo, so git describe correctly resolves the release tag.
+  # 00-run.sh's git path is wrong inside Docker, so we pre-write it here instead.
+  _GECKO_VERSION=$(git -C "$WORKDIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)
+  if [ -n "$_GECKO_VERSION" ]; then
+    echo "$_GECKO_VERSION" > "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/VERSION"
+    echo "[$ARCHLBL] VERSION: $_GECKO_VERSION"
+  else
+    echo "[$ARCHLBL] WARNING: No git tag found; VERSION not set (agent will report 'dev')"
+  fi
+
   mkdir -p "$CACHE_DIR/stage0/00-apt-tuning"
   cat > "$CACHE_DIR/stage0/00-apt-tuning/00-run.sh" <<'EOF'
 #!/bin/bash -e

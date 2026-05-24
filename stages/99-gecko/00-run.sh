@@ -17,10 +17,26 @@ install -d "${ROOTFS_DIR}/opt/gecko"
 
 cp -rv "files/opt/gecko/." "${ROOTFS_DIR}/opt/gecko/"
 
-# ── Write VERSION file from git tag ──
-IMAGE_VERSION=$(git -C "$(dirname "$0")/../.." describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
-echo "${IMAGE_VERSION}" > "${ROOTFS_DIR}/opt/gecko/VERSION"
-echo "[99-gecko] Wrote VERSION file: ${IMAGE_VERSION}"
+# ── Write VERSION file ──
+# build-local.sh writes the VERSION into files/opt/gecko/ from the correct git
+# context (host, outside Docker) so it arrives here via the cp -rv above.
+# Only fall back to git if the file is missing or empty.
+if [ -s "${ROOTFS_DIR}/opt/gecko/VERSION" ]; then
+  echo "[99-gecko] VERSION: $(cat "${ROOTFS_DIR}/opt/gecko/VERSION") (from staging area)"
+else
+  # Secondary fallback: try git from the Docker-visible path.
+  # NOTE: $0 inside Docker resolves to /pi-gen/…, so ../../ points to pi-gen root
+  # which has no version tags. This will usually produce an empty string, but we
+  # guard against that explicitly.
+  _FALLBACK_VER=$(git -C "$(dirname "$0")/../.." describe --tags --abbrev=0 2>/dev/null || true)
+  _FALLBACK_VER=$(echo "$_FALLBACK_VER" | sed 's/^v//')
+  if [ -n "$_FALLBACK_VER" ]; then
+    echo "$_FALLBACK_VER" > "${ROOTFS_DIR}/opt/gecko/VERSION"
+    echo "[99-gecko] VERSION: $_FALLBACK_VER (from git fallback)"
+  else
+    echo "[99-gecko] WARNING: VERSION could not be determined; agent will report 'dev'"
+  fi
+fi
 
 if [ -f "${ROOTFS_DIR}/opt/gecko/tools/bootstrap_gecko.sh" ]; then
   sed -i 's/\r$//' "${ROOTFS_DIR}/opt/gecko/tools/"*.sh 2>/dev/null || true
