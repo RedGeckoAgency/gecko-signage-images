@@ -97,11 +97,11 @@ jobs:
       - name: Generate Packages index
         run: |
           cd repo
-          # armhf
-          dpkg-scanpackages --arch armhf pool/ > dists/stable/main/binary-armhf/Packages
+          # armhf — --multiversion keeps ALL versions in the index (required for forced downgrades)
+          dpkg-scanpackages --multiversion --arch armhf pool/ > dists/stable/main/binary-armhf/Packages
           gzip -9c dists/stable/main/binary-armhf/Packages > dists/stable/main/binary-armhf/Packages.gz
           # arm64
-          dpkg-scanpackages --arch arm64 pool/ > dists/stable/main/binary-arm64/Packages
+          dpkg-scanpackages --multiversion --arch arm64 pool/ > dists/stable/main/binary-arm64/Packages
           gzip -9c dists/stable/main/binary-arm64/Packages > dists/stable/main/binary-arm64/Packages.gz
 
       - name: Generate & sign Release file
