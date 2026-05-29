@@ -13,9 +13,10 @@ fi
 echo "[gecko-agent] Installing Python dependencies..."
 /opt/gecko/.venv/bin/pip install -q --no-cache-dir -r /opt/gecko/requirements.txt
 
-# Reload systemd and restart the service
+# Reload systemd and restart services
 echo "[gecko-agent] Restarting gecko-agent service..."
 systemctl daemon-reload
 systemctl restart gecko-agent || true
+systemctl restart gecko-web || true
 
 echo "[gecko-agent] Update complete."
