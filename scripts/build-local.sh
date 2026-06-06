@@ -26,8 +26,6 @@ if command -v apt-get >/dev/null 2>&1; then
     git rsync xz-utils bmap-tools qemu-user-static pigz dos2unix >/dev/null || true
 fi
 
-# In CI the workflow pre-initialises the gecko submodule with SSH credentials,
-# so skip the fetch here and just verify the directory exists.
 if [ ! -d "gecko/.git" ]; then
   git submodule update --init --recursive gecko
 fi
@@ -46,7 +44,9 @@ TEMPLATE_CONFIG_DIR="$WORKDIR/config"
 ensure_cfg () {
   local file="$1" key="$2" val="$3"
   if grep -q "^[[:space:]]*${key}=" "$file"; then
-    sed -i "s|^[[:space:]]*${key}=.*|${key}=${val}|" "$file"
+    local esc_val
+    esc_val=$(printf '%s' "$val" | sed -e 's/[\\&|]/\\&/g')
+    sed -i "s|^[[:space:]]*${key}=.*|${key}=${esc_val}|" "$file"
   else
     echo "${key}=${val}" >> "$file"
   fi
@@ -154,9 +154,6 @@ EOF
   fi
   echo "[$ARCHLBL] Injecting Gecko payload into $TARGET_STAGE (Lite mode: $([ "$TARGET_STAGE" = "stage2" ] && echo "yes" || echo "no"))"
 
-  # Force re-execution of the stage containing gecko code.
-  # Earlier stages (stage0, stage1) remain marked complete so CONTINUE=1
-  # skips them — this is the main speedup for iterative gecko development.
   if [ -d "$CACHE_DIR/work" ]; then
     echo "[$ARCHLBL] Clearing SKIP marker for $TARGET_STAGE (forces re-run of gecko substage)"
     rm -f "$CACHE_DIR/work/${TARGET_STAGE}/SKIP" 2>/dev/null || true
@@ -187,10 +184,6 @@ EOF
   [ -f "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh" ] && \
     chmod +x "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/tools/bootstrap_gecko.sh"
 
-  # ── Write VERSION into the staging area ──
-  # This runs in the host (outside Docker) where $WORKDIR is the gecko-signage-images
-  # git repo, so git describe correctly resolves the release tag.
-  # 00-run.sh's git path is wrong inside Docker, so we pre-write it here instead.
   _GECKO_VERSION=$(git -C "$WORKDIR" describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || true)
   if [ -n "$_GECKO_VERSION" ]; then
     echo "$_GECKO_VERSION" > "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/opt/gecko/VERSION"
