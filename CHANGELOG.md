@@ -16,6 +16,8 @@ Image releases are tagged as `v<major>.<minor>.<patch>`.
 
 ### Changed
 
+- (dashboard) Redesigned the settings and superadmin sidebars into a consistent card-style nav: icon + label rows, soft active "pill" highlight, hover state, and a "Log Out" button pinned to the bottom
+- (dashboard) Licenses and Billing settings now show a "Coming soon" note instead of placeholder/sample data; the original implementations are preserved in-place as comments for when those features are wired up
 - (dashboard) Tightened the typography scale to professional values to remove the "zoomed-in" feel: page titles 28→24px, prominent text 15→16px; added `--font-size-lh` (18px) subsection rung; global buttons repointed from `lg` to `md` (14px)
 - (dashboard) Migrated ~566 hardcoded `px` font-sizes across 55 CSS modules to the `--font-size-*` design tokens, rounding each down to the nearest rung (marketing/landing styles untouched)
 - (dashboard) Migrated remaining `rem`-based font-sizes (51 across 19 files) and inline TSX `fontSize` values (11 across 6 files) to the design tokens, rounding the rendered size down to the nearest rung
@@ -23,6 +25,10 @@ Image releases are tagged as `v<major>.<minor>.<patch>`.
 
 ### Fixed
 
+- (dashboard) Settings sidebar no longer shifts position between sub-pages — the layout now uses a fixed-width sidebar + flex-filled content (matching superadmin) instead of centering the whole group; removed the per-page `margin-left` hacks that double-indented content
+- (dashboard) Settings close button icon is sized as an icon again (64px, centered, moved to `top: 8px`) instead of shrinking to the 24px text token
+- (dashboard) Sidebar user dropdown no longer breaks its icon/label spacing after visiting Settings — `AddUserModal.css`'s global `.dropdown-icon` was leaking `position: absolute` onto `.user-dropdown .dropdown-icon`; scoped it to `.dropdown-container`
+- (dashboard) Replaced `font-size: var(--radius-lg)` misuse (7 occurrences across sidebars, billing, profile, organization) with the equal `--font-size-sm` token
 - (agent) WiFi scan fallback no longer returns fabricated `TestNetwork1/2/3` entries when no networks are found; returns an empty list so the UI shows an honest "no networks" state
 - (dashboard) Replaced two `any` casts in `DeviceSettingsModal` orientation state with a typed `Orientation` alias
 - (build) `ensure_cfg` in `build-local.sh` now escapes sed replacement special chars (`& | \`) so config values containing them can't corrupt the substitution
