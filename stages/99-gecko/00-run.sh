@@ -116,6 +116,14 @@ rm -f /etc/xdg/autostart/gnome-initial-setup.desktop 2>/dev/null || true
 raspi-config nonint do_wifi_country US
 EOF
 
+# ── Pre-create Python venv and install dependencies (offline-ready first boot) ──
+echo "[99-gecko] Pre-baking Python venv into image..."
+on_chroot << 'EOF'
+python3 -m venv /opt/gecko/.venv
+/opt/gecko/.venv/bin/pip install --upgrade pip wheel
+/opt/gecko/.venv/bin/pip install --no-cache-dir -r /opt/gecko/requirements.txt
+EOF
+
 install -D -m 0644 /dev/stdin "${ROOTFS_DIR}/etc/ssh/sshd_config.d/99-gecko.conf" <<'CONF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no

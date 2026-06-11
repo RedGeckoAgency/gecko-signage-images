@@ -1,7 +1,6 @@
 [Unit]
 Description=Run Gecko bootstrap once
-After=multi-user.target network-online.target
-Wants=network-online.target
+After=multi-user.target
 
 [Service]
 Type=oneshot
