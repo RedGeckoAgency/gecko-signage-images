@@ -3,7 +3,8 @@ out/
 *.swp
 *.swo
 *.DS_Store
-README.local.md
 .tmp-pigen/
 .logs/
 .context/
+# local md files
+*.local.md
