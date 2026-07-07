@@ -7,6 +7,10 @@ Image releases are tagged as `v<major>.<minor>.<patch>`.
 
 ## [Unreleased]
 
+### Changed
+
+- (dashboard) Migrated hosting from Netlify to Firebase App Hosting (one backend per environment: `gecko-signage` on `main`, `gecko-signage-staging` on `staging`) to fix a regional connectivity issue on Netlify's edge network (GS-87) and consolidate onto infra already used for Firestore/Auth/Functions. Per-environment config moved to `apphosting.yaml`/`apphosting.staging.yaml`; `FIREBASE_ADMIN_PRIVATE_KEY` moved to Google Secret Manager. See ADR-010.
+
 ## [v0.2.1]
 
 ### Security

@@ -8,3 +8,6 @@ out/
 .context/
 # local md files
 *.local.md
+
+# Local Netlify folder
+.netlify
