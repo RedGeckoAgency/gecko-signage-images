@@ -6,8 +6,6 @@ out/
 .tmp-pigen/
 .logs/
 .context/
+
 # local md files
 *.local.md
-
-# Local Netlify folder
-.netlify
