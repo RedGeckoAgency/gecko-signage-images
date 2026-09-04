@@ -1,8 +1,8 @@
 [submodule "gecko"]
 	path = gecko
 	url = git@github.com:RedGeckoAgency/gecko-signage-agent.git
-	branch = main
+	branch = staging
 [submodule "dashboard"]
 	path = dashboard
 	url = git@github.com:MoKhaled112/Gecko-Signage.git
-	branch = main
+	branch = staging
