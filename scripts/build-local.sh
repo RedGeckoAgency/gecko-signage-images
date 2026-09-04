@@ -192,6 +192,20 @@ EOF
     echo "[$ARCHLBL] WARNING: No git tag found; VERSION not set (agent will report 'dev')"
   fi
 
+  # Resolve target environment (staging vs production)
+  _DETECTED_ENV="${GECKO_ENV:-}"
+  if [ -z "$_DETECTED_ENV" ]; then
+    _GIT_BRANCH=$(git -C "$WORKDIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "main")
+    if [[ "$_GIT_BRANCH" == *"staging"* ]] || [[ "${_GECKO_VERSION:-}" == *"staging"* ]] || [[ "${_GECKO_VERSION:-}" == *"rc"* ]]; then
+      _DETECTED_ENV="staging"
+    else
+      _DETECTED_ENV="production"
+    fi
+  fi
+  echo "[$ARCHLBL] Target environment: $_DETECTED_ENV"
+  mkdir -p "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/etc/default"
+  echo "GECKO_ENV=$_DETECTED_ENV" > "$CACHE_DIR/$TARGET_STAGE/99-gecko/files/etc/default/gecko-agent"
+
   mkdir -p "$CACHE_DIR/stage0/00-apt-tuning"
   cat > "$CACHE_DIR/stage0/00-apt-tuning/00-run.sh" <<'EOF'
 #!/bin/bash -e

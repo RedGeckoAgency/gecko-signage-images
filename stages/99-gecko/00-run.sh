@@ -49,6 +49,10 @@ install -D -m 0644 "files/etc/systemd/system/gecko-bootstrap.service"       "${R
 install -d "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants"
 ln -sf ../gecko-bootstrap.service "${ROOTFS_DIR}/etc/systemd/system/multi-user.target.wants/gecko-bootstrap.service"
 
+if [ -f "files/etc/default/gecko-agent" ]; then
+  install -D -m 0644 "files/etc/default/gecko-agent" "${ROOTFS_DIR}/etc/default/gecko-agent"
+fi
+
 # ── APT Repository Config ──
 echo "[99-gecko] Configuring Gecko APT repository..."
 install -d "${ROOTFS_DIR}/etc/apt/sources.list.d"
