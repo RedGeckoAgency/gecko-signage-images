@@ -118,6 +118,15 @@ rm -f /etc/xdg/autostart/gnome-initial-setup.desktop 2>/dev/null || true
 
 # Set default WLAN Country to US to avoid WPA3/connection issues
 raspi-config nonint do_wifi_country US
+
+# Disable WiFi power save — brcmfmac aggressively sleeps the radio between
+# heartbeat intervals, which causes the WiFi to disconnect on kiosk devices.
+mkdir -p /etc/NetworkManager/conf.d
+cat > /etc/NetworkManager/conf.d/99-wifi-powersave-off.conf <<'PSEOF'
+[connection]
+wifi.powersave = 2
+PSEOF
+chmod 644 /etc/NetworkManager/conf.d/99-wifi-powersave-off.conf
 EOF
 
 # ── Pre-create Python venv and install dependencies (offline-ready first boot) ──
