@@ -6,6 +6,7 @@ out/
 .tmp-pigen/
 .logs/
 .context/
+.agents/
 
 # local md files
 *.local.md
