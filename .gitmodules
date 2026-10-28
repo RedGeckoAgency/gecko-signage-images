@@ -4,5 +4,5 @@
 	branch = staging
 [submodule "dashboard"]
 	path = dashboard
-	url = git@github.com:MoKhaled112/Gecko-Signage.git
+	url = git@github.com:MoAbdelsater/Gecko-Signage.git
 	branch = staging
