@@ -57,10 +57,8 @@ cp packaging/DEBIAN/conffiles "$PKG_ROOT/DEBIAN/conffiles"
 chmod 755 "$PKG_ROOT/DEBIAN/postinst" "$PKG_ROOT/DEBIAN/prerm"
 
 # ── Copy agent source code ──
-# Top-level files
-for f in agent_main.py app.py browser_launcher.py wifi_manager.py requirements.txt; do
-    [ -f "$GECKO_SRC/$f" ] && cp "$GECKO_SRC/$f" "$PKG_ROOT/opt/gecko/"
-done
+# Top-level files (all Python modules + requirements)
+cp "$GECKO_SRC"/*.py "$GECKO_SRC/requirements.txt" "$PKG_ROOT/opt/gecko/"
 
 # Directories (agent_core, tools, static, templates)
 for d in agent_core tools static templates; do

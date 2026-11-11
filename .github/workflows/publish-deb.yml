@@ -47,7 +47,7 @@ jobs:
       - name: Install build tools
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils gnupg2
+          sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils gnupg2 python3 python3-venv
 
       - name: Resolve version
         id: version
@@ -73,6 +73,24 @@ jobs:
 
       - name: List built packages
         run: ls -lh out/deb/
+
+      - name: Smoke test .deb packages (contents, imports & templates)
+        run: |
+          chmod +x scripts/verify-deb.sh
+          ./scripts/verify-deb.sh out/deb/gecko-agent_*.deb
+
+      # ── Verify the .deb contains every Python file from the source tree ──
+      - name: Check .deb contents
+        run: |
+          git -C gecko ls-files '*.py' | grep -v '^tests/' | sort > /tmp/src.txt
+          for deb in out/deb/*.deb; do
+            dpkg-deb -c "$deb" | awk '{print $6}' | grep '^\./opt/gecko/.*\.py$' \
+              | sed 's|^\./opt/gecko/||' | sort > /tmp/pkg.txt
+            if ! diff -u /tmp/src.txt /tmp/pkg.txt; then
+              echo "ERROR: $deb is missing Python files (see diff above)"
+              exit 1
+            fi
+          done
 
       # ── Import GPG key ──
       - name: Import GPG signing key
