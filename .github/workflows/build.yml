@@ -27,7 +27,9 @@ concurrency:
 jobs:
     build:
         name: Build ${{ matrix.arch }}
-        runs-on: ubuntu-latest
+        # Pinned: ubuntu-latest moved to a release where qemu-user-static is a
+        # virtual package with no install candidate, which breaks this job.
+        runs-on: ubuntu-24.04
         timeout-minutes: 360
         strategy:
             fail-fast: false
