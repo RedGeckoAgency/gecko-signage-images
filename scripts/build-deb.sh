@@ -53,7 +53,9 @@ sed "s/{{VERSION}}/${DEB_VERSION}/g" packaging/DEBIAN/control.template > "$PKG_R
 sed -i "s/^Architecture:.*/Architecture: ${ARCH}/" "$PKG_ROOT/DEBIAN/control"
 cp packaging/DEBIAN/postinst "$PKG_ROOT/DEBIAN/postinst"
 cp packaging/DEBIAN/prerm "$PKG_ROOT/DEBIAN/prerm"
-cp packaging/DEBIAN/conffiles "$PKG_ROOT/DEBIAN/conffiles"
+if [ -f packaging/DEBIAN/conffiles ] && grep -q '[^[:space:]]' packaging/DEBIAN/conffiles; then
+    cp packaging/DEBIAN/conffiles "$PKG_ROOT/DEBIAN/conffiles"
+fi
 chmod 755 "$PKG_ROOT/DEBIAN/postinst" "$PKG_ROOT/DEBIAN/prerm"
 
 # ── Copy agent source code ──
